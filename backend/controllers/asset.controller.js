@@ -53,9 +53,9 @@ export const createAssetScan = tryCatch(async (req, res) => {
         Serial2
       )
       VALUES (
-        @barcode,
-        @assetTag,
-        @greenTag
+        @Serial,
+        @VSerial,
+        @Serial2
       )
     `;
 

@@ -13,8 +13,9 @@ import axios from "axios";
 import { COLORS } from "@/constants/colors";
 import Button from "@/components/ui/Button";
 import { MaterialIcons } from "@expo/vector-icons";
+import { EXPO_PUBLIC_BASE_URL } from "@env";
 
-const API_URL = `${process.env.EXPO_PUBLIC_BASE_URL}/asset/scan`;
+const API_URL = `${EXPO_PUBLIC_BASE_URL}/asset/scan`;
 
 export default function ScanPage() {
   const [barcode, setBarcode] = useState("");
