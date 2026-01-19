@@ -35,10 +35,10 @@ export const fetchAssets = tryCatch(async (req, res) => {
 
 // SAVE SCANNED ASSET
 export const createAssetScan = tryCatch(async (req, res) => {
-  const { barcode, assetTag } = req.body;
+  const { barcode, assetTag, greenTag } = req.body;
 
-  if (!barcode || !assetTag) {
-    throw new AppError("Required fields: barcode, assetTag", 400);
+  if (!barcode || !assetTag || !greenTag) {
+    throw new AppError("Required fields: barcode, assetTag and greenTag.", 400);
   }
 
   let pool;
@@ -49,11 +49,13 @@ export const createAssetScan = tryCatch(async (req, res) => {
     const query = `
       INSERT INTO TagSerial (
         Serial,
-        VSerial
+        VSerial,
+        Serial2
       )
       VALUES (
         @barcode,
         @assetTag,
+        @greenTag
       )
     `;
 
@@ -61,6 +63,7 @@ export const createAssetScan = tryCatch(async (req, res) => {
       .request()
       .input("Serial", sql.VarChar, barcode)
       .input("VSerial", sql.VarChar, assetTag)
+      .input("Serial2", sql.VarChar, greenTag)
       .query(query);
 
     res.status(201).json({

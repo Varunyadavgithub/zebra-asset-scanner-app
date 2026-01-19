@@ -1,10 +1,18 @@
 import { useRef, useState, useEffect } from "react";
-import { View, Text, StyleSheet, TextInput, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Alert,
+  TouchableOpacity,
+} from "react-native";
 import { Stack } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { COLORS } from "@/constants/colors";
 import Button from "@/components/ui/Button";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const API_URL = `${process.env.EXPO_PUBLIC_BASE_URL}/asset/scan`;
 
@@ -14,22 +22,16 @@ export default function ScanPage() {
   const [greenTag, setGreenTag] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Refs for auto-focus
   const barcodeRef = useRef(null);
   const assetTagRef = useRef(null);
   const greenTagRef = useRef(null);
 
-  // Auto-focus workflow
   useEffect(() => {
-    if (barcode && !assetTag) {
-      assetTagRef.current?.focus();
-    }
+    if (barcode && !assetTag) assetTagRef.current?.focus();
   }, [barcode]);
 
   useEffect(() => {
-    if (barcode && assetTag && !greenTag) {
-      greenTagRef.current?.focus();
-    }
+    if (barcode && assetTag && !greenTag) greenTagRef.current?.focus();
   }, [barcode, assetTag]);
 
   const handleBarcodeChange = (text) => setBarcode(text.replace(/[\r\n]/g, ""));
@@ -74,13 +76,22 @@ export default function ScanPage() {
     barcodeRef.current?.focus();
   };
 
-  // Disable button if any field is empty or loading
   const isButtonDisabled = !barcode || !assetTag || !greenTag || loading;
 
   return (
     <>
       <Stack.Screen options={{ title: "Scan Asset" }} />
       <View style={styles.container}>
+        {/* Refresh button at the top */}
+        <TouchableOpacity style={styles.refreshButton} onPress={resetForm}>
+          <MaterialIcons name="refresh" size={28} color={COLORS.primary} />
+          <Text
+            style={{ color: COLORS.primary, marginLeft: 6, fontWeight: "600" }}
+          >
+            Reset
+          </Text>
+        </TouchableOpacity>
+
         {/* Barcode input */}
         <Text style={styles.label}>Barcode</Text>
         <TextInput
@@ -160,5 +171,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.text,
     backgroundColor: COLORS.white,
+  },
+  refreshButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
   },
 });
