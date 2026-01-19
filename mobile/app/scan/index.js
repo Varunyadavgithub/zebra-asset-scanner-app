@@ -1,85 +1,138 @@
-import { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Dimensions,
-  Alert,
-} from "react-native";
+import { useRef, useState, useEffect } from "react";
+import { View, Text, StyleSheet, TextInput, Alert } from "react-native";
 import { Stack } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 import { COLORS } from "@/constants/colors";
 import Button from "@/components/ui/Button";
 
-const { width, height } = Dimensions.get("window");
+const API_URL = `${process.env.EXPO_PUBLIC_BASE_URL}/asset/scan`;
 
 export default function ScanPage() {
   const [barcode, setBarcode] = useState("");
-  const [psn, setPsn] = useState("");
   const [assetTag, setAssetTag] = useState("");
+  const [greenTag, setGreenTag] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Save scan data (here using AsyncStorage as example)
+  // Refs for auto-focus
+  const barcodeRef = useRef(null);
+  const assetTagRef = useRef(null);
+  const greenTagRef = useRef(null);
+
+  // Auto-focus workflow
+  useEffect(() => {
+    if (barcode && !assetTag) {
+      assetTagRef.current?.focus();
+    }
+  }, [barcode]);
+
+  useEffect(() => {
+    if (barcode && assetTag && !greenTag) {
+      greenTagRef.current?.focus();
+    }
+  }, [barcode, assetTag]);
+
+  const handleBarcodeChange = (text) => setBarcode(text.replace(/[\r\n]/g, ""));
+  const handleAssetTagChange = (text) =>
+    setAssetTag(text.replace(/[\r\n]/g, ""));
+  const handleGreenTagChange = (text) =>
+    setGreenTag(text.replace(/[\r\n]/g, ""));
+
   const saveScan = async () => {
-    if (!barcode || !psn || !assetTag) {
+    if (!barcode || !assetTag || !greenTag) {
       Alert.alert("Error", "Please fill all fields before saving!");
       return;
     }
-
-    const scanData = {
-      barcode,
-      psn,
-      assetTag,
-      timestamp: new Date().toISOString(),
-    };
+    const payload = { barcode, assetTag, greenTag };
 
     try {
-      // Using AsyncStorage for now
-      const existing = await AsyncStorage.getItem("scans");
-      const scans = existing ? JSON.parse(existing) : [];
-      scans.push(scanData);
-      await AsyncStorage.setItem("scans", JSON.stringify(scans));
-
-      Alert.alert("Success", "Scan saved!");
-      // Reset fields
-      setBarcode("");
-      setPsn("");
-      setAssetTag("");
+      setLoading(true);
+      await axios.post(API_URL, payload);
+      Alert.alert("Success", "Scan data saved to server");
+      resetForm();
     } catch (error) {
-      Alert.alert("Error", "Failed to save scan");
-      console.log(error);
+      console.log("API failed, saving offline:", error.message);
+
+      // Offline fallback
+      const offlineData = { ...payload, timestamp: new Date().toISOString() };
+      const existing = await AsyncStorage.getItem("offline_scans");
+      const scans = existing ? JSON.parse(existing) : [];
+      scans.push(offlineData);
+      await AsyncStorage.setItem("offline_scans", JSON.stringify(scans));
+
+      Alert.alert("Saved Offline", "Will sync when online");
+      resetForm();
+    } finally {
+      setLoading(false);
     }
   };
 
+  const resetForm = () => {
+    setBarcode("");
+    setAssetTag("");
+    setGreenTag("");
+    barcodeRef.current?.focus();
+  };
+
+  // Disable button if any field is empty or loading
+  const isButtonDisabled = !barcode || !assetTag || !greenTag || loading;
+
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: "Scan Asset",
-          headerShown: true,
-        }}
-      />
-
+      <Stack.Screen options={{ title: "Scan Asset" }} />
       <View style={styles.container}>
-        {/* Barcode */}
-        <Text style={styles.label}>Barcode:</Text>
+        {/* Barcode input */}
+        <Text style={styles.label}>Barcode</Text>
         <TextInput
+          ref={barcodeRef}
           style={styles.input}
           placeholder="Scan or enter barcode"
+          placeholderTextColor={COLORS.textLight}
           value={barcode}
-          onChangeText={setBarcode}
+          onChangeText={handleBarcodeChange}
+          autoFocus
+          showSoftInputOnFocus={false}
         />
 
-        {/* Asset Tag */}
-        <Text style={styles.label}>Asset Tag:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Scan or enter asset tag"
-          value={assetTag}
-          onChangeText={setAssetTag}
-        />
+        {/* Asset Tag input */}
+        {barcode.length > 0 && (
+          <>
+            <Text style={styles.label}>Asset Tag</Text>
+            <TextInput
+              ref={assetTagRef}
+              style={styles.input}
+              placeholder="Scan or enter asset tag"
+              placeholderTextColor={COLORS.textLight}
+              value={assetTag}
+              onChangeText={handleAssetTagChange}
+              showSoftInputOnFocus={false}
+            />
+          </>
+        )}
 
-        {/* Save Button */}
-        <Button title="Save Scan" onPress={saveScan} />
+        {/* Green Tag input */}
+        {barcode.length > 0 && assetTag.length > 0 && (
+          <>
+            <Text style={styles.label}>Green Tag</Text>
+            <TextInput
+              ref={greenTagRef}
+              style={styles.input}
+              placeholder="Scan or enter green tag"
+              placeholderTextColor={COLORS.textLight}
+              value={greenTag}
+              onChangeText={handleGreenTagChange}
+              showSoftInputOnFocus={false}
+            />
+          </>
+        )}
+
+        {/* Save button */}
+        <Button
+          title={loading ? "Saving..." : "Save Scan"}
+          onPress={saveScan}
+          disabled={isButtonDisabled}
+          style={{ marginTop: 20 }}
+        />
       </View>
     </>
   );
@@ -100,10 +153,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.mutedText || "#ccc",
+    borderColor: COLORS.border,
     borderRadius: 8,
     padding: 12,
     marginTop: 5,
     fontSize: 16,
+    color: COLORS.text,
+    backgroundColor: COLORS.white,
   },
 });

@@ -32,3 +32,49 @@ export const fetchAssets = tryCatch(async (req, res) => {
     }
   }
 });
+
+// SAVE SCANNED ASSET
+export const createAssetScan = tryCatch(async (req, res) => {
+  const { barcode, assetTag } = req.body;
+
+  if (!barcode || !assetTag) {
+    throw new AppError("Required fields: barcode, assetTag", 400);
+  }
+
+  let pool;
+
+  try {
+    pool = await sql.connect(config);
+
+    const query = `
+      INSERT INTO TagSerial (
+        Serial,
+        VSerial
+      )
+      VALUES (
+        @barcode,
+        @assetTag,
+      )
+    `;
+
+    await pool
+      .request()
+      .input("Serial", sql.VarChar, barcode)
+      .input("VSerial", sql.VarChar, assetTag)
+      .query(query);
+
+    res.status(201).json({
+      success: true,
+      message: "Asset scan saved successfully.",
+    });
+  } catch (error) {
+    throw new AppError(
+      `Failed to save asset scaned data: ${error.message}`,
+      500,
+    );
+  } finally {
+    if (pool) {
+      await pool.close();
+    }
+  }
+});
