@@ -46,13 +46,35 @@ export const createAssetScan = tryCatch(async (req, res) => {
   try {
     pool = await sql.connect(config);
 
-    const query = `
+    // 1️⃣ Fetch DOCNO (PSNo) and Material from MaterialBarcode
+    const fetchQuery = `
+      SELECT DOCNO AS PSNo, Material
+      FROM MaterialBarcode
+      WHERE Serial = @Serial
+    `;
+    const fetchResult = await pool
+      .request()
+      .input("Serial", sql.VarChar, barcode)
+      .query(fetchQuery);
+
+    if (!fetchResult.recordset.length) {
+      throw new AppError(`No material found for barcode: ${barcode}`, 404);
+    }
+
+    const { PSNo, Material } = fetchResult.recordset[0];
+
+    // 2️⃣ Insert into TagSerial with fetched data and scanned values
+    const insertQuery = `
       INSERT INTO TagSerial (
+        PSNo,
+        Material,
         Serial,
         VSerial,
         Serial2
       )
       VALUES (
+        @PSNo,
+        @Material,
         @Serial,
         @VSerial,
         @Serial2
@@ -61,18 +83,27 @@ export const createAssetScan = tryCatch(async (req, res) => {
 
     await pool
       .request()
+      .input("PSNo", sql.VarChar, PSNo)
+      .input("Material", sql.VarChar, Material)
       .input("Serial", sql.VarChar, barcode)
       .input("VSerial", sql.VarChar, assetTag)
       .input("Serial2", sql.VarChar, greenTag)
-      .query(query);
+      .query(insertQuery);
 
     res.status(201).json({
       success: true,
       message: "Asset scan saved successfully.",
+      data: {
+        PSNo,
+        Material,
+        Serial: barcode,
+        VSerial: assetTag,
+        Serial2: greenTag,
+      },
     });
   } catch (error) {
     throw new AppError(
-      `Failed to save asset scaned data: ${error.message}`,
+      `Failed to save scanned asset data: ${error.message}`,
       500,
     );
   } finally {
