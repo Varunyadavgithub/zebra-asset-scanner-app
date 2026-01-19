@@ -20,7 +20,7 @@ export default function Index() {
 
       {/* 50% Content */}
       <View style={styles.contentSection}>
-        <Text style={styles.title}>Asset Scanner</Text>
+        <Text style={styles.title}>Asset Tracking System</Text>
 
         <Text style={styles.subtitle}>
           Scan barcodes, PSN numbers, and asset tags to track your assets
@@ -59,7 +59,6 @@ const styles = StyleSheet.create({
   contentSection: {
     height: height * 0.5, // 🔥 EXACT 50%
     paddingHorizontal: 24,
-    paddingVertical: 50,
     alignItems: "center",
   },
 
