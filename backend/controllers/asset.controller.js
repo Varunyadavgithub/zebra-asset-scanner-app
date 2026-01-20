@@ -83,11 +83,11 @@ export const createAssetScan = tryCatch(async (req, res) => {
 
     await pool
       .request()
-      .input("PSNo", sql.VarChar, PSNo)
-      .input("Material", sql.VarChar, Material)
-      .input("Serial", sql.VarChar, barcode)
-      .input("VSerial", sql.VarChar, assetTag)
-      .input("Serial2", sql.VarChar, greenTag)
+      .input("PSNo", sql.BigInt, PSNo)
+      .input("Material", sql.Int, Material)
+      .input("Serial", sql.NVarChar(100), barcode)
+      .input("VSerial", sql.NVarChar(100), assetTag)
+      .input("Serial2", sql.NVarChar(100), greenTag)
       .query(insertQuery);
 
     res.status(201).json({
